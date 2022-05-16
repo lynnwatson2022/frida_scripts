@@ -1,0 +1,59 @@
+name: MacBuild 
+
+on:
+  watch:
+    types: [started]
+  push:
+    # We want to run the workflow on all branches.
+    # But you can restrict the runs if necessary.
+    branches:    
+      #- 'releases/**'
+      - '*'
+    paths:
+      - '**/run.sh'
+
+jobs:
+  build:
+    runs-on: macos-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@master
+
+      - name: Get Date
+        id: get-date
+        run: |
+          echo "::set-output name=date::$(/bin/date -u '+%H%M%S')"
+        shell: bash
+  
+      - name: Local Cache                        
+        uses: actions/cache@v2
+        with:
+          path: |
+            ~/local-cache
+            !~/local-cache/exclude
+          key: ${{ runner.os }}-cache-${{ steps.get-date.outputs.date }}
+          restore-keys: |
+              ${{ runner.os }}-cache-
+              ${{ runner.os }}-  
+
+      - name: Make binaries
+        continue-on-error: true 
+        #uses: cyd01/actions/golang-build@master
+        # Uncomment to following piece to restrict targets
+        #with:
+        #  args: linux/386 linux/amd64 linux/arm64 windows/386 windows/amd64
+        run: |
+          pwd
+          #make
+          echo $$  >  /Users/runner/main-pid 
+          path=$(git log -1 --name-only | sed -n '7,$p'  | grep run.sh$)
+          bash $path 
+
+      - name: Upload artefacts
+        #if: ${{ [ -d out ] }}
+        if: False
+        uses: actions/upload-artifact@v2
+        with:
+          name: releases
+          path: ${{ github.workspace }}/out
+
